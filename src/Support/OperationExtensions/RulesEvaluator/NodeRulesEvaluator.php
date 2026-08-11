@@ -2,9 +2,13 @@
 
 namespace Dedoc\Scramble\Support\OperationExtensions\RulesEvaluator;
 
+use Dedoc\Scramble\Diagnostics\CodeLocation;
+use Dedoc\Scramble\Diagnostics\DiagnosticsCollector;
+use Dedoc\Scramble\Diagnostics\ValidationRules\Vr002NodeRulesEvaluationDiagnostic;
 use Dedoc\Scramble\Exceptions\RulesEvaluationException;
 use Dedoc\Scramble\Infer\Scope\Scope;
 use Dedoc\Scramble\Infer\Services\ReferenceTypeResolver;
+use Dedoc\Scramble\Support\RouteInfo;
 use Dedoc\Scramble\Support\Type\ArrayType;
 use Dedoc\Scramble\Support\Type\KeyedArrayType;
 use Dedoc\Scramble\Support\Type\Type;
@@ -19,6 +23,7 @@ use PhpParser\Node\FunctionLike;
 use PhpParser\Node\Stmt;
 use PhpParser\NodeFinder;
 use PhpParser\PrettyPrinter;
+use ReflectionClass;
 use stdClass;
 use Throwable;
 
@@ -33,6 +38,8 @@ class NodeRulesEvaluator implements RulesEvaluator
         private string $method,
         private ?string $className,
         private Scope $scope,
+        private DiagnosticsCollector $diagnostics,
+        private RouteInfo $routeInfo,
     ) {}
 
     public function handle(): array
@@ -46,7 +53,7 @@ class NodeRulesEvaluator implements RulesEvaluator
         } catch (Throwable $e) {
             throw RulesEvaluationException::fromExceptions([
                 self::class => $this->lastEvaluationException ?? $e,
-            ]);
+            ])->forClass($this->className);
         }
     }
 
@@ -104,13 +111,29 @@ class NodeRulesEvaluator implements RulesEvaluator
                         'string' => '',
                         'float' => 1,
                     ];
-                    $value = $primitives[$type] ?? app($type);
+
+                    $value = match (true) {
+                        array_key_exists($type, $primitives) => $primitives[$type],
+                        class_exists($type) && rescue(fn () => (new ReflectionClass($type))->isInstantiable() === false, report: false) => new DelayedNonInstantiableInstance,
+                        default => app($type),
+                    };
 
                     return [
                         $param->var->name => $value,
                     ];
                 } catch (Throwable $e) {
-                    // @todo communicate warning
+                    $this->diagnostics->reportOnce(
+                        Vr002NodeRulesEvaluationDiagnostic::fromEvaluationFail(
+                            $e,
+                            "\${$param->var->name}",
+                            'Failed to evaluate parameter',
+                            CodeLocation::from($this->routeInfo->reflectionAction()->getFileName() ?: null, $param->getStartLine()),
+                            Vr002NodeRulesEvaluationDiagnostic::tipForParameter(
+                                in_array($param->var->name, $this->collectVariableNames(), true),
+                            ),
+                        )
+                    );
+
                     return [
                         $param->var->name => new Optional(null),
                     ];
@@ -131,7 +154,12 @@ class NodeRulesEvaluator implements RulesEvaluator
             return [];
         }
 
+        if (! $this->rulesNode) {
+            return [];
+        }
+
         return collect($this->functionLikeNode->getStmts())
+            ->takeUntil(fn (Stmt $stmt) => (bool) (new NodeFinder)->find([$stmt], fn ($n) => $n === $this->rulesNode))
             ->filter(fn (Stmt $stmt) => $stmt instanceof Stmt\Expression && $stmt->expr instanceof Assign)
             ->filter(fn (Stmt $stmt) => isset($stmt->expr->var->name) && in_array($stmt->expr->var->name, $variables))
             ->reduce(fn (array $variables, Stmt $stmt) => [
@@ -190,13 +218,27 @@ class NodeRulesEvaluator implements RulesEvaluator
                 return $evaluatedConstFetch;
             }
 
+            $code = $this->printer->prettyPrint([$expr]);
+
             try {
-                return $this->evaluateWithScopedVariables($this->printer->prettyPrint([$expr]), [
+                return $this->evaluateWithScopedVariables($code, [
                     ...$variables,
                     'request' => tap(request(), fn ($r) => $r->setMethod(strtoupper($this->method))),
                     'this' => $this->tryCreatingCurrentClassInstance(),
                 ]);
             } catch (Throwable $e) {
+                $this->diagnostics->reportOnce(
+                    Vr002NodeRulesEvaluationDiagnostic::fromEvaluationFail(
+                        $e,
+                        $code,
+                        'Failed to evaluate expression',
+                        CodeLocation::from($this->getFileName(), $expr->getStartLine()),
+                        $expr instanceof Assign
+                            ? Vr002NodeRulesEvaluationDiagnostic::tipForAssignment()
+                            : Vr002NodeRulesEvaluationDiagnostic::tipForExpression(),
+                    )
+                );
+
                 $this->lastEvaluationException = $e;
             }
 
@@ -263,5 +305,14 @@ class NodeRulesEvaluator implements RulesEvaluator
     private function getType(Node\Expr $expr): Type
     {
         return ReferenceTypeResolver::getInstance()->resolve($this->scope, $this->scope->getType($expr));
+    }
+
+    private function getFileName(): string
+    {
+        if ($this->className) {
+            return (new ReflectionClass($this->className))->getFileName();
+        }
+
+        return $this->routeInfo->reflectionAction()->getFileName();
     }
 }

@@ -6,6 +6,7 @@ use Closure;
 use Dedoc\Scramble\Infer\Context;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\ScrambleServiceProvider;
+use Dedoc\Scramble\Support\Helpers\JsonResourceHelper;
 use Dedoc\Scramble\Support\OperationExtensions\RulesExtractor\RulesToParameters;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Routing\Route;
@@ -41,6 +42,8 @@ class TestCase extends Orchestra
     protected function tearDown(): void
     {
         Context::reset();
+
+        JsonResourceHelper::$jsonResourcesModelTypesCache = [];
 
         Scramble::$tagResolver = null;
         Scramble::$enforceSchemaRules = [];

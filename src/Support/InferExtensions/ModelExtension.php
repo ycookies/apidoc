@@ -4,6 +4,8 @@ namespace Dedoc\Scramble\Support\InferExtensions;
 
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Dedoc\Scramble\Diagnostics\DiagnosticsCollector;
+use Dedoc\Scramble\Diagnostics\Model\Md001PendingMigrationsDiagnostic;
 use Dedoc\Scramble\Infer\AutoResolvingArgumentTypeBag;
 use Dedoc\Scramble\Infer\Extensions\Event\MethodCallEvent;
 use Dedoc\Scramble\Infer\Extensions\Event\PropertyFetchEvent;
@@ -47,7 +49,12 @@ class ModelExtension implements MethodReturnTypeExtension, PropertyTypeExtension
 {
     use ExtractsLiteralArrayKeys;
 
-    private static $cache;
+    /** @var array<string, mixed> */
+    private array $cache = [];
+
+    public function __construct(
+        private ?DiagnosticsCollector $diagnostics = null,
+    ) {}
 
     public function shouldHandle(ObjectType|string $type): bool
     {
@@ -520,7 +527,18 @@ class ModelExtension implements MethodReturnTypeExtension, PropertyTypeExtension
 
     private function getModelInfo(ObjectType $type)
     {
-        return static::$cache[$type->name] ??= (new ModelInfo($type->name))->handle();
+        $info = $this->cache[$type->name] ??= (new ModelInfo($type->name))->handle();
+
+        if ($info->get('table_missing')) {
+            $this->diagnostics?->reportOnce(
+                Md001PendingMigrationsDiagnostic::forModel(
+                    $info->get('class'),
+                    $info->get('instance')->getTable(),
+                ),
+            );
+        }
+
+        return $info;
     }
 
     private function getProtectedValue($obj, $name)

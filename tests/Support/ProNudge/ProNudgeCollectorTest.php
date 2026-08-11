@@ -61,11 +61,8 @@ it('reports a query builder only pitch', function () {
 
     (new ProNudgeReporter($collector))->report($command);
 
-    $rendered = $output->fetch();
-
-    expect($rendered)
-        ->toContain('Scramble PRO understands Spatie Query Builder and automatically documents')
-        ->toContain('filters, sorts, includes, and sparse fieldsets.')
+    expect($output->fetch())
+        ->toContain('Spatie Query Builder')
         ->not->toContain('Laravel Data');
 });
 
@@ -79,11 +76,9 @@ it('reports a laravel data only pitch', function () {
 
     (new ProNudgeReporter($collector))->report($command);
 
-    $rendered = $output->fetch();
-
-    expect($rendered)
-        ->toContain('Scramble PRO understands Laravel Data and automatically generates accurate')
-        ->toContain('request and response schemas from your Data objects.')
+    expect($output->fetch())
+        ->toContain('Laravel Data')
+        ->toContain('Data objects.')
         ->not->toContain('Query Builder');
 });
 

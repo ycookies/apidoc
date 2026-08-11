@@ -1,8 +1,13 @@
 <?php
 
+use Dedoc\Scramble\Console\Commands\AnalyzeDocumentation;
 use Dedoc\Scramble\Console\Commands\ExportDocumentation;
+use Dedoc\Scramble\Diagnostics\DiagnosticSeverity;
+use Dedoc\Scramble\Diagnostics\GenericDiagnostic;
 use Dedoc\Scramble\Generator;
+use Dedoc\Scramble\OpenApiContext;
 use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\ProNudge\ProNudgeReporter;
 use Dedoc\Scramble\Support\ProNudge\ProNudgeSignal;
 use Illuminate\Routing\Route;
@@ -85,6 +90,36 @@ it('prints pro nudge after export when signals are present', function () {
         ->expectsOutputToContain('Query Builder filters, sorts, includes, and sparse fieldsets')
         ->expectsOutputToContain('Laravel Data request and response schemas')
         ->expectsOutputToContain('Learn more: '.ProNudgeReporter::PRO_URL)
+        ->assertOk();
+});
+
+it('prints diagnostics and then pro nudge when analyzing documentation', function () {
+    Scramble::routes(fn (Route $r) => str_starts_with($r->uri, 'api/pro-nudge'));
+    Scramble::configure()->withDocumentTransformers(function (OpenApi $_, OpenApiContext $context) {
+        $context->diagnostics->report(new GenericDiagnostic(DiagnosticSeverity::Warning, 'Test diagnostic warning'));
+    });
+
+    RouteFacade::get('api/pro-nudge/data-return', [ProNudge_DataReturn_Controller::class, 'index']);
+
+    artisan(AnalyzeDocumentation::class)
+        ->expectsOutputToContain('Test diagnostic warning')
+        ->expectsOutputToContain('Scramble detected:')
+        ->assertOk();
+});
+
+it('exports documentation and then prints pro nudge', function () {
+    Scramble::routes(fn (Route $r) => str_starts_with($r->uri, 'api/pro-nudge'));
+    Scramble::configure()->withDocumentTransformers(function (OpenApi $_, OpenApiContext $context) {
+        $context->diagnostics->reportQuietly(new GenericDiagnostic(DiagnosticSeverity::Error, 'Test diagnostic error'));
+    });
+
+    RouteFacade::get('api/pro-nudge/data-return', [ProNudge_DataReturn_Controller::class, 'index']);
+
+    File::shouldReceive('put')->once();
+
+    artisan(ExportDocumentation::class)
+        ->expectsOutputToContain('OpenAPI document exported to')
+        ->expectsOutputToContain('Scramble detected:')
         ->assertOk();
 });
 
