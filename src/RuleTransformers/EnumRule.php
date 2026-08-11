@@ -5,6 +5,7 @@ namespace Dedoc\Scramble\RuleTransformers;
 use BackedEnum;
 use Dedoc\Scramble\Contracts\RuleTransformer;
 use Dedoc\Scramble\Support\EnumTransformer;
+use Dedoc\Scramble\Support\Generator\Types\ArrayType;
 use Dedoc\Scramble\Support\Generator\Types\Type;
 use Dedoc\Scramble\Support\Generator\TypeTransformer;
 use Dedoc\Scramble\Support\RuleTransforming\NormalizedRule;
@@ -38,20 +39,20 @@ class EnumRule implements RuleTransformer
         /** @var BackedEnum[] $only */
         $only = method_exists(Enum::class, 'only') ? $this->getProtectedValue($rule, 'only') : []; // @phpstan-ignore function.alreadyNarrowedType
 
-        if ($except || $only) {
-            return $this->preservePreviousRules(
-                EnumTransformer::make($enumName)
-                    ->except($except)
-                    ->only($only)
-                    ->transform(),
-                $previous,
-            );
+        $enumType = ($except || $only)
+            ? EnumTransformer::make($enumName)
+                ->except($except)
+                ->only($only)
+                ->transform()
+            : $this->openApiTransformer->transform(new ObjectType($enumName));
+
+        if ($previous instanceof ArrayType) {
+            $previous->items = $this->preservePreviousRules($enumType, $previous->items);
+
+            return $previous;
         }
 
-        return $this->preservePreviousRules(
-            $this->openApiTransformer->transform(new ObjectType($enumName)),
-            $previous,
-        );
+        return $this->preservePreviousRules($enumType, $previous);
     }
 
     private function preservePreviousRules(Type $current, Type $previous): Type
