@@ -1,6 +1,10 @@
 {
     "name": "ycookies/apidoc",
     "description": "Automatic generation of API documentation for Laravel applications.",
+    "version": "1.0.1",
+    "replace": {
+        "dedoc/scramble": "*"
+    },
     "keywords": [
         "laravel",
         "documentation",
@@ -13,6 +17,11 @@
             "name": "ycookies",
             "email": "3664839@qq.com",
             "role": "Developer"
+        },
+        {
+            "name": "Roman Lytvynenko",
+            "email": "litvinenko95@gmail.com",
+            "role": "Developer (upstream scramble)"
         }
     ],
     "require": {

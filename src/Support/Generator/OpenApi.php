@@ -4,6 +4,8 @@ namespace Dedoc\Scramble\Support\Generator;
 
 class OpenApi
 {
+    use WithExtensions;
+
     public string $version;
 
     public InfoObject $info;
@@ -86,6 +88,7 @@ class OpenApi
         $result = [
             'openapi' => $this->version,
             'info' => $this->info->toArray(),
+            ...$this->extensionPropertiesToArray(),
         ];
 
         if (count($this->servers)) {

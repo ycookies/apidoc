@@ -4,9 +4,17 @@
   </a>
 </p>
 
-# Scramble
+# Scramble (ycookies fork)
 
 Scramble generates API documentation for Laravel project. Without requiring you to manually write PHPDoc annotations. Docs are generated in OpenAPI 3.1.0 format.
+
+## Fork 增强
+
+本 fork 在上游基础上增强了文档 UI,详见 [docs/scalar-renderer.md](docs/scalar-renderer.md):
+
+- **Scalar 渲染器**:配置 `renderer => 'scalar'` 切换;侧边栏支持 `分组 -> 模块 -> 接口` 三级导航(x-tagGroups)
+- **前端资源本地化**:Scalar JS 内置包内并自动发布到 `public/vendor/scalar/`,不依赖 CDN
+- **全部展开 / 全部收起**按钮、加载提示、中文界面(`localization.locale = 'zh-CN'`)
 
 ## Documentation
 

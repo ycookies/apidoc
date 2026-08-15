@@ -59,6 +59,12 @@ return [
 
     'renderer' => 'elements',
 
+    /*
+     * 三级导航(分组 -> 模块 -> 接口):把 "分组-模块" 命名的 tag 拆成 x-tagGroups 扩展,
+     * Scalar 渲染器支持该扩展。设为 false 可关闭。详见 docs/scalar-renderer.md。
+     */
+    'tag_groups' => true,
+
     'renderers' => [
         /*
          * Stoplight Elements config options: https://docs.stoplight.io/docs/elements/b074dc47b2826-elements-configuration-options
@@ -78,13 +84,19 @@ return [
          */
         'scalar' => [
             'view' => 'scramble::scalar',
-            'cdn' => 'https://cdn.jsdelivr.net/npm/@scalar/api-reference',
+            // 默认使用包内置并自动发布的本地资源(public/vendor/scalar/api-reference.js),
+            // 避免国内访问 CDN 超时导致文档页白屏;也可换成任意可访问的完整 URL
+            'cdn' => 'vendor/scalar/api-reference.js',
             'theme' => 'laravel',
             'proxyUrl' => 'https://proxy.scalar.com',
             'darkMode' => false,
             'showDeveloperTools' => 'never',
             'agent' => ['disabled' => true],
             'credentials' => 'include',
+            // UI 界面语言,内置:en de es fr pt ru ar zh-CN;translations 可覆盖个别文案
+            'localization' => [
+                'locale' => 'zh-CN',
+            ],
         ],
     ],
 

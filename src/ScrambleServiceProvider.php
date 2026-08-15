@@ -11,6 +11,7 @@ use Dedoc\Scramble\Console\Commands\ClearDocumentationCache;
 use Dedoc\Scramble\Console\Commands\ExportDocumentation;
 use Dedoc\Scramble\DocumentTransformers\AddDocumentTags;
 use Dedoc\Scramble\DocumentTransformers\CleanupUnusedResponseReferencesTransformer;
+use Dedoc\Scramble\DocumentTransformers\TagGroupsTransformer;
 use Dedoc\Scramble\Extensions\ExceptionToResponseExtension;
 use Dedoc\Scramble\Extensions\OperationExtension;
 use Dedoc\Scramble\Extensions\TypeToSchemaExtension;
@@ -307,6 +308,13 @@ class ScrambleServiceProvider extends PackageServiceProvider
                 CleanupUnusedResponseReferencesTransformer::class,
             ]);
 
+        // 三级导航:按 "分组-模块" 约定生成 x-tagGroups,详见 docs/scalar-renderer.md
+        if (config('scramble.tag_groups', true)) {
+            Scramble::configure()->withDocumentTransformers(TagGroupsTransformer::class);
+        }
+
+        $this->registerScalarAssets();
+
         if (Scramble::$defaultRoutesIgnored) {
             Scramble::configure()->expose(false);
         }
@@ -316,6 +324,24 @@ class ScrambleServiceProvider extends PackageServiceProvider
         $this->app->booted(function () {
             $this->registerRoutes();
         });
+    }
+
+    /**
+     * 发布 Scalar 文档前端资源到 public/vendor/scalar:
+     * 支持 `php artisan vendor:publish --tag=scramble-assets`,
+     * 目标缺失时(如新装/升级后)自动复制一份,避免文档页因资源缺失白屏。
+     */
+    private function registerScalarAssets(): void
+    {
+        $source = __DIR__.'/../resources/assets/scalar';
+        $target = public_path('vendor/scalar');
+
+        $this->publishes([$source => $target], 'scramble-assets');
+
+        if (! is_file($target.'/api-reference.js')) {
+            @mkdir($target, 0755, true);
+            @copy($source.'/api-reference.js', $target.'/api-reference.js');
+        }
     }
 
     private function registerProNudge(): void
