@@ -11,7 +11,10 @@
 <div id="scalar-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:fixed;inset:0;background:var(--scalar-background-1,#fff);font-family:sans-serif;color:#6b7280;z-index:10;">
     <div style="width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#6366f1;border-radius:50%;animation:scalar-spin .8s linear infinite;"></div>
     <div>API 文档加载中,请稍候…</div>
-    <style>@keyframes scalar-spin{to{transform:rotate(360deg)}}</style>
+    <style>
+    @keyframes scalar-spin{to{transform:rotate(360deg)}}
+    
+    </style>
 </div>
 <script>
     // 资源加载失败时给出明确提示,而不是一直白屏
@@ -68,10 +71,52 @@
             transition: all .15s ease;
             text-align:center;
         }
+        aside li.group\\/sidebar-section > div.group\\/button .group\\/button-label, aside > ul > li:not(.group\\/sidebar-section) > button .group\\/button-label{
+            font-size: 16px !important;
+        }
         .scalar-toggle-row button:hover {
             color: var(--scalar-color-accent, #4f6bfe);
             border-color: var(--scalar-color-accent, #4f6bfe);
         }
+        /* ===== 侧边栏三级层次 =====
+         * 分组(一级) > 模块(二级) > 接口(三级),字号/字重/颜色逐级递减,层次分明。
+         * 注意:Tailwind 分子类含 "/",CSS 选择器中须转义为 \/,且 JS 模板字符串里要写 \\/
+         */
+
+        /* 一级:分组标题(平台 / 点餐 / 服务预约…)及顶部"简介" */
+        aside li.group\\/sidebar-section > div.group\\/button .group\\/button-label,
+        aside > ul > li:not(.group\\/sidebar-section) > button .group\\/button-label {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: .02em;
+            color: var(--scalar-sidebar-color-1, #1f232b);
+        }
+
+        /* 二级:模块(分类 / 菜品 / 订单…) */
+        aside li.group\\/sidebar-section > ul > li > button .group\\/button-label {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--scalar-sidebar-color-1, #3a3f47);
+        }
+
+        /* 三级:接口(具体 API) */
+        aside li.group\\/sidebar-section > ul > li > ul > li .group\\/button-label {
+            font-size: 12.5px;
+            font-weight: 450;
+            color: var(--scalar-sidebar-color-2, #6b7280);
+        }
+
+        /* 悬浮/选中的层次反馈 */
+        aside .group\\/button { transition: background-color .15s ease, color .15s ease; }
+        aside li.group\\/sidebar-section > ul > li > button:hover .group\\/button-label { color: var(--scalar-color-accent); }
+        aside li.group\\/sidebar-section > ul > li > ul > li > button:hover .group\\/button-label { color: var(--scalar-color-accent); }
+
+        /* 选中项:左侧指示条 + 轻微底色 */
+        :root, .scalar-app {
+            --scalar-sidebar-indent-border-active: var(--scalar-color-accent, #4f6bfe);
+        }
+        aside .scalar-sidebar-indent { transition: border-color .15s ease; }
+
         @media (max-width: 1000px) { .scalar-toggle-row { display: none; } }
     `;
 
