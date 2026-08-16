@@ -2,6 +2,12 @@
 
 All notable changes to `scramble` will be documented in this file.
 
+## 1.0.2 - 2026-08-16
+
+- **Scalar 侧边栏样式微调**:一级分组标题字号提至 16px(层级更分明);隐藏 `.scalar-mcp-layer` 弹层;底部明暗切换区加分隔线、移除外部链接
+- **仓库瘦身(无运行时影响)**:移除上游 `tests/`、`.github/`、`phpstan-baseline.neon` 等未随包维护的文件,补 `.gitignore`
+- 提醒:升级后若文档页仍渲染 Elements,检查项目 `config/scramble.php` 的 `ui` 块中是否残留 `logo` 键(即使值为空串也会触发旧版 Elements 兼容分支,忽略 `renderer => 'scalar'`)
+
 ## 1.0.1 - 2026-08-15
 
 - **Scalar 渲染器增强**(详见 [docs/scalar-renderer.md](docs/scalar-renderer.md)):
